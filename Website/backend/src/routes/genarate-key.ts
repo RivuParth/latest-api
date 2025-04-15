@@ -1,7 +1,9 @@
 import express from 'express';
 import { google } from 'googleapis';
 import mongoose from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 import User from '../models/User';
+import ApiKey from '../models/ApiKey';
 const router = express.Router();
 
 const projectId = process.env.GCP_PROJECT_ID;
@@ -47,28 +49,62 @@ async function createApiKey() {
       console.log('API key created successfully');
       console.log('Operation details:', JSON.stringify(keyData, null, 2));
   
-      return keyData.response.keyString;
+      const apiKey = keyData.response.keyString;
+      const uuid = uuidv4();
+      
+      // Store or update in database
+      try {
+        const newApiKey = new ApiKey({
+          uuid,
+          apiKey,
+          createdAt: new Date()
+        });
+        await newApiKey.save();
+      } catch (err: any) {
+        if (err.code === 11000) {
+          // Update existing key if duplicate found
+          await ApiKey.findOneAndUpdate(
+            { apiKey: null },
+            { $set: { apiKey, uuid, createdAt: new Date() } },
+            { upsert: false }
+          );
+        } else {
+          throw err;
+        }
+      }
+      
+      return { apiKey, uuid };
     } catch (err: any) {
-      console.error('Authentication failed:', {
-        message: err.message,
-        code: err.code,
-        details: err.response?.data,
-        stack: err.stack
-      });
-      process.exit(1);
+      if (err.code === 11000) {
+        console.error('Duplicate API key detected:', {
+          message: 'API key already exists in database',
+          code: err.code
+        });
+        throw new Error('API key generation failed - duplicate key detected');
+      } else {
+        console.error('Authentication failed:', {
+          message: err.message,
+          code: err.code,
+          details: err.response?.data,
+          stack: err.stack
+        });
+        throw err;
+      }
     }
   }
   
 
 // Generate api key
-router.get('/', async (req, res) => {
+router.post('/', async (req, res) => {
     try {
-      const apiKey = await createApiKey();
-      res.json({ 
-        apiKey,
-        status: 'success',
-        message: 'API key generated successfully'
-      });
+      const { generateUuid } = req.body;
+      const result = await createApiKey();
+      
+      if (generateUuid) {
+        res.json({ apiKey: result.apiKey, uuid: result.uuid, status: 'success', message: 'API key generated successfully' });
+      } else {
+        res.json({ apiKey: result.apiKey, status: 'success', message: 'API key generated successfully' });
+      }
     } catch (err : any) {
       console.error('Error details:', {
         message: err.message,
@@ -108,7 +144,10 @@ router.get('/:userId', async (req, res) => {
     
     // Add the new API key to user's apiKeys array
     user.apiKeys.push({
-      key: apiKey,
+      key: {
+        apiKey: apiKey.apiKey,
+        uuid: apiKey.uuid
+      },
       createdAt: new Date(),
       isActive: true,
       serviceAccountEmail: process.env.GCP_SERVICE_ACCOUNT_EMAIL || '',

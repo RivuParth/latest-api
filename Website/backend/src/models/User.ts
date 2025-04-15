@@ -11,7 +11,10 @@ interface IUser extends mongoose.Document {
   stripeCustomerId?: string;
   apiKey?: string;
   apiKeys: {
-    key: string;
+    key: {
+      apiKey: string;
+      uuid: string;
+    };
     createdAt: Date;
     isActive: boolean;
     serviceAccountEmail: string;

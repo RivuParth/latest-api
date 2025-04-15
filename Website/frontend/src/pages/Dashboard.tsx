@@ -26,7 +26,15 @@ const Dashboard = () => {
   const handleGetApiKey = async () => {
     setLoading(true);
     try {
-      const response = await fetch(import.meta.env.VITE_API_URL+'/generate-key/');
+      const response = await fetch(import.meta.env.VITE_API_URL+'/generate-key/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          generateUuid: true
+        })
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -34,12 +42,12 @@ const Dashboard = () => {
       
       const data = await response.json();
       
-      if (!data.apiKey) {
-        throw new Error('API key was not returned from server');
+      if (!data.apiKey || !data.uuid) {
+        throw new Error('API key or UUID was not returned from server');
       }
       
-      setApiKey(data.apiKey);
-      toast.success('Google Cloud API Key generated successfully!');
+      setApiKey(`UUID: ${data.uuid}\nAPI Key: ${data.apiKey}`);
+      toast.success('Key and UUID generated successfully!');
     } catch (err) {
       toast.error('Failed to generate API key: ' + (err as Error).message);
       console.error('Client error during API call:', err);

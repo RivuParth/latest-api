@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useRef } from 'react';
 import {
   Box,
   Typography,
@@ -23,7 +22,7 @@ export default function LandingPage() {
   const { user, logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const lottieRef = useRef(null);
+
 
   const handleGetStarted = () => {
     navigate('/signup');

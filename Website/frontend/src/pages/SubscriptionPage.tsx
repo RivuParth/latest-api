@@ -32,7 +32,7 @@ const SubscriptionPage = () => {
   const handleSubscribe = async () => {
     setLoading(true);
     try {
-      window.location.href = 'https://buy.stripe.com/test_6oE8zd4cH3Mi7IY9AC';
+      window.location.href = 'https://buy.stripe.com/00gdRy1s6bWC0wg3cO';
     } catch (error: any) {
       console.error('Subscription error:', error);
       toast.error(error?.message || 'Failed to initiate subscription process');
